@@ -1,0 +1,83 @@
+name: personnal cloud
+
+services:
+  # Note: MariaDB is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/mariadb
+  db:
+    # Note: Check the recommend version here: https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html#server
+    container_name: ${PROJECT_NAME}_DB
+    image: mariadb:lts
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED
+    volumes:
+      - $PWD/data/mysql:/var/lib/mysql
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+
+  # Note: Redis is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/redis
+  redis:
+    container_name: ${PROJECT_NAME}_REDIS
+    image: docker.io/redis:6.2-alpine@sha256:e3b17ba9479deec4b7d1eeec1548a253acc5374d68d3b27937fcfe4df8d18c7e
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+    volumes:
+      - $PWD/data/redis:/data
+
+
+  app:
+    container_name: ${PROJECT_NAME}_APP
+    build: ./fpm-alpine/.
+    restart: always
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - $PWD/data/nextcloud:/var/www/html
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_HOST=db
+
+  # Note: Nginx is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/nginx/
+  #######################################
+  # NGINX
+  #######################################
+  nginx:
+    build: ./nginx/.
+    container_name: ${PROJECT_NAME}_NGINX
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - $PWD/data/nextcloud:/var/www/html
+      - $PWD/nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
+      - $PWD/data/logs/nginx:/var/log/nginx
+    depends_on:
+      - app
+    volumes_from:
+      - app
+
+  #######################################
+  # Phpmyadmin
+  #######################################
+  phpmyadmin:
+    container_name: ${PROJECT_NAME}_PHPMYADMIN
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
