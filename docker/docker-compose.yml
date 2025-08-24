@@ -19,6 +19,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
+    networks:
+      - personnal_nextcloud
 
   # Note: Redis is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/redis
@@ -30,7 +32,8 @@ services:
     restart: always
     volumes:
       - $PWD/data/redis:/data
-
+    networks:
+      - personnal_nextcloud
 
   app:
     container_name: ${PROJECT_NAME}_APP
@@ -49,6 +52,8 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_HOST=db
+    networks:
+      - personnal_nextcloud
 
   # Note: Nginx is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/nginx/
@@ -70,6 +75,8 @@ services:
       - app
     volumes_from:
       - app
+    networks:
+      - personnal_nextcloud
 
   #######################################
   # Phpmyadmin
@@ -81,3 +88,9 @@ services:
       - "8081:80"
     depends_on:
       - db
+    networks:
+      - personnal_nextcloud
+
+networks:
+  personnal_nextcloud:
+    external: true
