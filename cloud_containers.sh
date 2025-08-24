@@ -4,6 +4,12 @@ action=$1
 current_path=$(pwd)
 
 case "$action" in
+    "restart" )
+        echo "restart all cloud container"
+        cd $current_path/docker &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
+        cd $current_path/common/portainer &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
+        docker ps
+    ;;
     "start" )
         echo "start all cloud container"
         docker network create nextcloud
@@ -21,3 +27,5 @@ case "$action" in
         echo "Usage : /etc/init.d/cloud_containers.sh start|stop"
         ;;
 esac
+
+exit 0
