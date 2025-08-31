@@ -4,3 +4,7 @@ docker/.idea
 .env
 
 common/portainer/data/*
+nextcloud/data/*
+immich/data/*
+
+.idea

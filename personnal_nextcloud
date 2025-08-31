@@ -14,33 +14,141 @@
 #                    cloud personnels de manière automatisée.
 ### END INIT INFO
 
-
 action=$1
 current_path=$(pwd)
 
+# Variables des services avec leurs chemins (ordre important pour les dépendances)
+services_nextcloud="$current_path/nextcloud"
+services_portainer="$current_path/common/portainer"
+services_immich="$current_path/immich"
+
+# Variables des actions disponibles (solution compatible avec tous les shells)
+actions_stop="Arrêter"
+actions_restart="Redémarrer"
+actions_start="Démarrer"
+actions_status="Afficher le statut"
+
+
+function show_status() {
+    echo "=== Statut des conteneurs Docker ==="
+    docker ps
+}
+
+function manage_service() {
+    local service_name=$1
+    local service_path=$2
+    local action=$3
+    
+    local action_text="actions_$action"
+    local action_value="${!action_text}"
+    
+    echo "→ $action_value le service: $service_name"
+    
+    if [ ! -d "$service_path" ]; then
+        echo "  ❌ Répertoire non trouvé: $service_path"
+        return 1
+    fi
+    
+    cd "$service_path" || {
+        echo "  ❌ Impossible d'accéder au répertoire: $service_path"
+        return 1
+    }
+    
+    case "$action" in
+        "start"|"restart")
+            docker compose -f docker-compose.yml build
+            docker compose -f docker-compose.yml up -d
+            ;;
+        "stop")
+            docker compose -f docker-compose.yml down
+            ;;
+    esac
+    
+    if [ $? -eq 0 ]; then
+        echo "  ✅ $service_name: $action_value réussi"
+    else
+        echo "  ❌ $service_name: $action_value échoué"
+        return 1
+    fi
+}
+
+
+function manage_all_services() {
+    local action=$1
+    local success=true
+
+    local action_text="actions_$action"
+    local action_value="${!action_text}"
+    
+    echo "=== Gestion des services cloud ==="
+    echo "Action: $action_value"
+    echo ""
+    
+    # Gestion du réseau pour start/stop
+    if [ "$action" = "start" ]; then
+        echo "🌐 Création du réseau Docker: personnal_nextcloud"
+        docker network create personnal_nextcloud 2>/dev/null || echo "  ℹ️  Le réseau existe déjà"
+    elif [ "$action" = "stop" ]; then
+        echo "🗑️  Suppression du réseau Docker: personnal_nextcloud"
+        docker network rm personnal_nextcloud 2>/dev/null || echo "  ℹ️  Le réseau n'existe pas"
+    fi
+    
+    echo ""
+    
+    # Gestion de chaque service via les variables
+    local services_list=("nextcloud" "portainer" "immich")
+    for service_name in "${services_list[@]}"; do
+        local service_path_var="services_$service_name"
+        local service_path="${!service_path_var}"
+        if ! manage_service "$service_name" "$service_path" "$action"; then
+            success=false
+        fi
+        echo ""
+    done
+    
+    # Affichage du statut final
+    show_status
+    
+    if [ "$success" = true ]; then
+        echo "🎉 Tous les services ont été $action_value avec succès!"
+    else
+        echo "⚠️  Certains services ont rencontré des problèmes"
+        return 1
+    fi
+}
+
 case "$action" in
     "restart" )
-        echo "restart all cloud container"
-        cd $current_path/docker &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
-        cd $current_path/common/portainer &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
-        docker ps
-    ;;
+        echo "🔄 Redémarrage de tous les conteneurs cloud"
+        manage_all_services "restart"
+        ;;
     "start" )
-        echo "start all cloud container"
-        docker network create personnal_nextcloud
-        cd $current_path/docker &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
-        cd $current_path/common/portainer &&  docker compose -f docker-compose.yml build && docker compose -f docker-compose.yml up -d
-        docker ps
+        echo "🚀 Démarrage de tous les conteneurs cloud"
+        manage_all_services "start"
         ;;
     "stop" )
-        echo "Stop all cloud container"
-        cd $current_path/docker && docker compose -f docker-compose.yml down
-        cd $current_path/common/portainer && docker compose -f docker-compose.yml down
-        docker network rm personnal_nextcloud
-        docker ps
+        echo "🛑 Arrêt de tous les conteneurs cloud"
+        manage_all_services "stop"
+        ;;
+    "status" )
+        show_status
         ;;
     * )
-        echo "Usage : /etc/init.d/cloud_containers.sh restart|start|stop"
+        echo "❌ Usage incorrect"
+        echo ""
+        echo "Usage: $0 {start|stop|restart|status}"
+        echo ""
+        echo "Actions disponibles:"
+        echo "  start    - Démarrer tous les services"
+        echo "  stop     - Arrêter tous les services"
+        echo "  restart  - Redémarrer tous les services"
+        echo "  status   - Afficher le statut des conteneurs"
+        echo ""
+        echo "Services gérés:"
+        echo "  • nextcloud: $services_nextcloud"
+        echo "  • portainer: $services_portainer"
+        echo "  • immich: $services_immich"
+        exit 1
         ;;
 esac
 

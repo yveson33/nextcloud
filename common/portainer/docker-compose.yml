@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
     networks:
       - personnal_nextcloud
-
+      
 volumes:
   data:
 
