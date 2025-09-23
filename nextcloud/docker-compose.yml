@@ -21,6 +21,9 @@ services:
       - MYSQL_USER=${MYSQL_USER}
     networks:
       - personnal_nextcloud
+    # Sécurité : pas d'exposition directe de la base de données
+    expose:
+      - "3306"
 
   # Note: Redis is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/redis
@@ -34,6 +37,9 @@ services:
       - $PWD/data/redis:/data
     networks:
       - personnal_nextcloud
+    # Sécurité : pas d'exposition directe de Redis
+    expose:
+      - "6379"
 
   app:
     container_name: ${PROJECT_NAME}_APP
@@ -54,6 +60,9 @@ services:
       - MYSQL_HOST=db
     networks:
       - personnal_nextcloud
+    # Sécurité : pas d'exposition directe de l'application PHP
+    expose:
+      - "9000"
 
   # Note: Nginx is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/nginx/
@@ -65,8 +74,12 @@ services:
     container_name: ${PROJECT_NAME}_NGINX
     restart: always
     ports:
-      - '80:80'
-      - '443:443'
+      # Configuration pour accès externe
+      - '80:80'      # HTTP
+      - '443:443'    # HTTPS
+      # Alternative : utiliser des ports personnalisés si 80/443 sont occupés
+      # - '8080:80'   # HTTP sur port 8080
+      # - '8443:443'  # HTTPS sur port 8443
     volumes:
       - $PWD/data/nextcloud:/var/www/html
       - $PWD/nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
@@ -85,13 +98,27 @@ services:
     container_name: ${PROJECT_NAME}_PHPMYADMIN
     image: phpmyadmin/phpmyadmin
     ports:
+      # Configuration pour accès externe sécurisé
       - "8081:80"
+      # Alternative : utiliser un port différent pour plus de sécurité
+      # - "9090:80"
     depends_on:
       - db
     networks:
       - personnal_nextcloud
-
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=${MYSQL_USER}
+      - PMA_PASSWORD=${MYSQL_PASSWORD}
 
 networks:
   personnal_nextcloud:
-    external: true
+    #"" external: true
+    # Options supplémentaires pour le réseau externe
+    driver: bridge
+    # Si vous voulez créer le réseau automatiquement, remplacez par :
+    # driver: bridge
+    # ipam:
+    #   config:
+    #     - subnet: 172.20.0.0/16

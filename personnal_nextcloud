@@ -56,6 +56,7 @@ function manage_service() {
     
     case "$action" in
         "start"|"restart")
+            docker network create personnal_nextcloud 
             docker compose -f docker-compose.yml build
             docker compose -f docker-compose.yml up -d
             ;;
