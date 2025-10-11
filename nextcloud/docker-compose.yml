@@ -111,6 +111,8 @@ services:
       - PMA_PORT=3306
       - PMA_USER=${MYSQL_USER}
       - PMA_PASSWORD=${MYSQL_PASSWORD}
+    expose:
+      - "8081"
 
 networks:
   personnal_nextcloud:
