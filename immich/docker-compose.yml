@@ -11,7 +11,7 @@ name: immich
 
 services:
   immich-server:
-    container_name: ${PROJECT_NAME}_immich_server
+    container_name: ${PROJECT_NAME}_IMMICH_SERVER
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     # extends:
     #   file: hwaccel.transcoding.yml
