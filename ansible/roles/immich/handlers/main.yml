@@ -1,0 +1,17 @@
+---
+# Handlers pour le rôle Immich
+
+- name: restart immich
+  command: docker compose -f {{ services.immich.path }}/docker-compose.yml restart
+  args:
+    chdir: "{{ services.immich.path }}"
+
+- name: stop immich
+  command: docker compose -f {{ services.immich.path }}/docker-compose.yml down
+  args:
+    chdir: "{{ services.immich.path }}"
+
+- name: start immich
+  command: docker compose -f {{ services.immich.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.immich.path }}"

@@ -5,12 +5,14 @@ docker/.idea
 
 data/*
 
-common/portainer/data/*
-nextcloud/data/*
-immich/data/*
+docker/portainer/data
+docker/nextcloud/data
+docker/immich/data
 
 .idea
 
-nextcloud/
-immich/
-www/data/*
+
+www/data
+www/immich
+www/nextcloud
+/docker/portainer/data/

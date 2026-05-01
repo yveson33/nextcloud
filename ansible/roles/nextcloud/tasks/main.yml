@@ -1,0 +1,67 @@
+---
+# Rôle Nextcloud - Déploiement et gestion de Nextcloud
+
+- name: Vérifier que le répertoire Nextcloud existe
+  stat:
+    path: "{{ services.nextcloud.path }}"
+  register: nextcloud_dir
+
+- name: Créer le répertoire Nextcloud si nécessaire
+  file:
+    path: "{{ services.nextcloud.path }}"
+    state: directory
+    mode: '0755'
+  when: not nextcloud_dir.stat.exists
+
+- name: Vérifier que docker-compose.yml existe
+  stat:
+    path: "{{ services.nextcloud.path }}/docker-compose.yml"
+  register: compose_file
+
+- name: Copier le fichier docker-compose.yml
+  copy:
+    src: "{{ playbook_dir }}/../../nextcloud/docker-compose.yml"
+    dest: "{{ services.nextcloud.path }}/docker-compose.yml"
+    mode: '0644'
+  when: not compose_file.stat.exists
+
+- name: Créer le répertoire de données si nécessaire
+  file:
+    path: "{{ services.nextcloud.path }}/data"
+    state: directory
+    mode: '0755'
+  when: not nextcloud_dir.stat.exists
+
+- name: Vérifier si les conteneurs Nextcloud sont en cours d'exécution
+  command: docker ps --filter "name={{ project_name }}" --format "{{ '{{.Names}}' }}"
+  register: nextcloud_containers
+  changed_when: false
+
+- name: Construire les images Docker
+  command: docker compose -f {{ services.nextcloud.path }}/docker-compose.yml build
+  args:
+    chdir: "{{ services.nextcloud.path }}"
+  when: nextcloud_containers.stdout == ""
+
+- name: Démarrer les conteneurs Nextcloud
+  command: docker compose -f {{ services.nextcloud.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.nextcloud.path }}"
+  register: nextcloud_start
+
+- name: Attendre que les services soient prêts
+  wait_for:
+    port: "{{ services.nextcloud.ports.http }}"
+    host: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+    delay: 10
+    timeout: 300
+  when: nextcloud_start.changed
+
+- name: Vérifier le statut des conteneurs
+  command: docker ps --filter "name={{ project_name }}"
+  register: nextcloud_status
+  changed_when: false
+
+- name: Afficher le statut
+  debug:
+    msg: "Nextcloud déployé avec succès. Conteneurs: {{ nextcloud_status.stdout_lines }}"

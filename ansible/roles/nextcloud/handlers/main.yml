@@ -1,0 +1,17 @@
+---
+# Handlers pour le rôle Nextcloud
+
+- name: restart nextcloud
+  command: docker compose -f {{ services.nextcloud.path }}/docker-compose.yml restart
+  args:
+    chdir: "{{ services.nextcloud.path }}"
+
+- name: stop nextcloud
+  command: docker compose -f {{ services.nextcloud.path }}/docker-compose.yml down
+  args:
+    chdir: "{{ services.nextcloud.path }}"
+
+- name: start nextcloud
+  command: docker compose -f {{ services.nextcloud.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.nextcloud.path }}"

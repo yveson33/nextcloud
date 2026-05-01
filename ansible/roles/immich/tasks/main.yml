@@ -1,0 +1,67 @@
+---
+# Rôle Immich - Déploiement et gestion d'Immich
+
+- name: Vérifier que le répertoire Immich existe
+  stat:
+    path: "{{ services.immich.path }}"
+  register: immich_dir
+
+- name: Créer le répertoire Immich si nécessaire
+  file:
+    path: "{{ services.immich.path }}"
+    state: directory
+    mode: '0755'
+  when: not immich_dir.stat.exists
+
+- name: Vérifier que docker-compose.yml existe
+  stat:
+    path: "{{ services.immich.path }}/docker-compose.yml"
+  register: compose_file
+
+- name: Copier le fichier docker-compose.yml
+  copy:
+    src: "{{ playbook_dir }}/../../immich/docker-compose.yml"
+    dest: "{{ services.immich.path }}/docker-compose.yml"
+    mode: '0644'
+  when: not compose_file.stat.exists
+
+- name: Créer le répertoire de données si nécessaire
+  file:
+    path: "{{ services.immich.path }}/data"
+    state: directory
+    mode: '0755'
+  when: not immich_dir.stat.exists
+
+- name: Vérifier si les conteneurs Immich sont en cours d'exécution
+  command: docker ps --filter "name=immich" --format "{{ '{{.Names}}' }}"
+  register: immich_containers
+  changed_when: false
+
+- name: Construire les images Docker
+  command: docker compose -f {{ services.immich.path }}/docker-compose.yml build
+  args:
+    chdir: "{{ services.immich.path }}"
+  when: immich_containers.stdout == ""
+
+- name: Démarrer les conteneurs Immich
+  command: docker compose -f {{ services.immich.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.immich.path }}"
+  register: immich_start
+
+- name: Attendre que les services soient prêts
+  wait_for:
+    port: "{{ services.immich.ports.http }}"
+    host: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+    delay: 10
+    timeout: 300
+  when: immich_start.changed
+
+- name: Vérifier le statut des conteneurs
+  command: docker ps --filter "name=immich"
+  register: immich_status
+  changed_when: false
+
+- name: Afficher le statut
+  debug:
+    msg: "Immich déployé avec succès. Conteneurs: {{ immich_status.stdout_lines }}"
