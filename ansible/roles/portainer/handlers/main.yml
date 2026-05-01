@@ -1,0 +1,17 @@
+---
+# Handlers pour le rôle Portainer
+
+- name: restart portainer
+  command: docker compose -f {{ services.portainer.path }}/docker-compose.yml restart
+  args:
+    chdir: "{{ services.portainer.path }}"
+
+- name: stop portainer
+  command: docker compose -f {{ services.portainer.path }}/docker-compose.yml down
+  args:
+    chdir: "{{ services.portainer.path }}"
+
+- name: start portainer
+  command: docker compose -f {{ services.portainer.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.portainer.path }}"

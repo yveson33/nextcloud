@@ -1,0 +1,22 @@
+# Ansible
+*.retry
+*.log
+.vault_pass
+vault_pass.txt
+
+# Facts cache
+/tmp/ansible_facts/
+
+# Logs
+logs/
+
+# Fichiers temporaires
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Variables sensibles (à ne jamais commiter)
+inventory/group_vars/vault.yml
+inventory/host_vars/*/vault.yml
+*.vault

@@ -1,0 +1,67 @@
+---
+# Rôle Portainer - Déploiement et gestion de Portainer
+
+- name: Vérifier que le répertoire Portainer existe
+  stat:
+    path: "{{ services.portainer.path }}"
+  register: portainer_dir
+
+- name: Créer le répertoire Portainer si nécessaire
+  file:
+    path: "{{ services.portainer.path }}"
+    state: directory
+    mode: '0755'
+  when: not portainer_dir.stat.exists
+
+- name: Vérifier que docker-compose.yml existe
+  stat:
+    path: "{{ services.portainer.path }}/docker-compose.yml"
+  register: compose_file
+
+- name: Copier le fichier docker-compose.yml
+  copy:
+    src: "{{ playbook_dir }}/../../common/portainer/docker-compose.yml"
+    dest: "{{ services.portainer.path }}/docker-compose.yml"
+    mode: '0644'
+  when: not compose_file.stat.exists
+
+- name: Créer le répertoire de données si nécessaire
+  file:
+    path: "{{ services.portainer.path }}/data"
+    state: directory
+    mode: '0755'
+  when: not portainer_dir.stat.exists
+
+- name: Vérifier si le conteneur Portainer est en cours d'exécution
+  command: docker ps --filter "name=portainer" --format "{{ '{{.Names}}' }}"
+  register: portainer_container
+  changed_when: false
+
+- name: Construire les images Docker
+  command: docker compose -f {{ services.portainer.path }}/docker-compose.yml build
+  args:
+    chdir: "{{ services.portainer.path }}"
+  when: portainer_container.stdout == ""
+
+- name: Démarrer le conteneur Portainer
+  command: docker compose -f {{ services.portainer.path }}/docker-compose.yml up -d
+  args:
+    chdir: "{{ services.portainer.path }}"
+  register: portainer_start
+
+- name: Attendre que le service soit prêt
+  wait_for:
+    port: "{{ services.portainer.ports.https }}"
+    host: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+    delay: 10
+    timeout: 300
+  when: portainer_start.changed
+
+- name: Vérifier le statut du conteneur
+  command: docker ps --filter "name=portainer"
+  register: portainer_status
+  changed_when: false
+
+- name: Afficher le statut
+  debug:
+    msg: "Portainer déployé avec succès. Conteneur: {{ portainer_status.stdout_lines }}"

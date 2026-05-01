@@ -13,17 +13,17 @@ Ce projet orchestre trois services principaux via Docker Compose :
 ## 📁 Structure du projet
 
 ```
-nextcloud/
-├── personnal_nextcloud          # Script de gestion principal
-├── nextcloud/                   # Service Nextcloud
-│   ├── docker-compose.yml      # Configuration Nextcloud
-│   ├── nginx/                   # Configuration Nginx
-│   └── fpm-alpine/             # Image PHP personnalisée
-├── common/portainer/           # Service Portainer
-│   └── docker-compose.yml
-├── immich/                     # Service Immich
-│   └── docker-compose.yml
-└── data/                       # Données persistantes (gitignorées)
+#nextcloud/
+├── personnal_nextcloud # Script de gestion principal (bash)
+├── cloud_services.py # Script de gestion principal (Python)
+├── docker/ # Services Docker
+│ ├── nextcloud/ # Service Nextcloud
+│ ├── portainer/ # Service Portainer
+│ └── immich/ # Service Immich
+├── ansible/ # Automatisation Ansible
+├── www/ # Fichiers Nextcloud
+├── data/ # Données persistantes (gitignorées)
+└── README.md # Ce fichier Données persistantes (gitignorées)
 ```
 
 ## 🚀 Installation et utilisation

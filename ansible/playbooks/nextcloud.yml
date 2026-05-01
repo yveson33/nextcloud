@@ -1,0 +1,35 @@
+---
+# Playbook pour le déploiement de Nextcloud uniquement
+# Usage: ansible-playbook playbooks/nextcloud.yml
+
+- name: Déploiement de Nextcloud
+  hosts: nextcloud_servers
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Vérifier que Docker est installé
+      command: docker --version
+      register: docker_version
+      changed_when: false
+    
+    - name: Afficher la version de Docker
+      debug:
+        msg: "Docker version: {{ docker_version.stdout }}"
+  
+  roles:
+    - role: docker
+      tags: docker
+    
+    - role: nextcloud
+      tags: nextcloud
+  
+  post_tasks:
+    - name: Vérifier le statut de Nextcloud
+      command: docker ps --filter "name={{ project_name }}"
+      register: nextcloud_status
+      changed_when: false
+    
+    - name: Afficher le statut
+      debug:
+        var: nextcloud_status.stdout_lines

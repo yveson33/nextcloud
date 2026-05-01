@@ -1,0 +1,58 @@
+---
+# Variables globales pour tous les hosts
+
+# Configuration Docker
+docker_users:
+  - "{{ ansible_user | default('deploy') }}"
+
+# Chemins de base
+base_path: "/Users/yves/Documents/Sites/nextcloud"
+# Pour un serveur distant, utilisez :
+# base_path: "/opt/nextcloud"
+
+# Configuration réseau
+docker_network_name: "personnal_nextcloud"
+docker_network_driver: "bridge"
+docker_network_subnet: "172.20.0.0/16"
+
+# Configuration des services
+services:
+  nextcloud:
+    enabled: true
+    path: "{{ base_path }}/nextcloud"
+    ports:
+      http: 80
+      https: 443
+      phpmyadmin: 8081
+    
+  portainer:
+    enabled: true
+    path: "{{ base_path }}/common/portainer"
+    ports:
+      https: 9443
+    
+  immich:
+    enabled: true
+    path: "{{ base_path }}/immich"
+    ports:
+      http: 2283
+
+# Variables d'environnement (à définir dans vault ou .env)
+# Ces valeurs doivent être sécurisées avec ansible-vault
+env_vars:
+  project_name: "nextcloud"
+  mysql_root_password: "CHANGE_ME"
+  mysql_password: "CHANGE_ME"
+  mysql_database: "nextcloud"
+  mysql_user: "nextcloud"
+  timezone: "Europe/Paris"
+  pgid: 1000
+  puid: 1000
+
+# Configuration de sauvegarde
+backup_enabled: false
+backup_path: "{{ base_path }}/backups"
+backup_retention_days: 7
+
+# Configuration de monitoring
+monitoring_enabled: false

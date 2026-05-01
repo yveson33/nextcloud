@@ -18,9 +18,9 @@ action=$1
 current_path=$(pwd)
 
 # Variables des services avec leurs chemins (ordre important pour les dépendances)
-services_nextcloud="$current_path/nextcloud"
-services_portainer="$current_path/common/portainer"
-services_immich="$current_path/immich"
+services_nextcloud="$current_path/docker/nextcloud"
+services_portainer="$current_path/docker/portainer"
+services_immich="$current_path/docker/immich"
 
 # Variables des actions disponibles (solution compatible avec tous les shells)
 actions_stop="Arrêter"

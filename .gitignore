@@ -3,8 +3,14 @@ docker/.idea
 .DS_Store
 .env
 
+data/*
+
 common/portainer/data/*
 nextcloud/data/*
 immich/data/*
 
 .idea
+
+nextcloud/
+immich/
+www/data/*

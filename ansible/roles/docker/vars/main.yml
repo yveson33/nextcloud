@@ -1,0 +1,7 @@
+---
+# Variables par défaut pour le rôle Docker
+
+docker_compose_version: "2.24.0"
+docker_network_name: "personnal_nextcloud"
+docker_network_driver: "bridge"
+docker_network_subnet: "172.20.0.0/16"

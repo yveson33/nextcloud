@@ -1,0 +1,25 @@
+---
+# Playbook pour le déploiement de Portainer uniquement
+# Usage: ansible-playbook playbooks/portainer.yml
+
+- name: Déploiement de Portainer
+  hosts: portainer_servers
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: docker
+      tags: docker
+    
+    - role: portainer
+      tags: portainer
+  
+  post_tasks:
+    - name: Vérifier le statut de Portainer
+      command: docker ps --filter "name=portainer"
+      register: portainer_status
+      changed_when: false
+    
+    - name: Afficher le statut
+      debug:
+        var: portainer_status.stdout_lines

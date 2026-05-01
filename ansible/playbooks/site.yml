@@ -1,0 +1,59 @@
+---
+# Playbook principal - Déploiement complet de l'infrastructure
+# Usage: ansible-playbook playbooks/site.yml
+
+- name: Déploiement complet de l'infrastructure Nextcloud
+  hosts: docker_hosts
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Variables globales
+    base_path: "{{ base_path | default('/opt/nextcloud') }}"
+  
+  pre_tasks:
+    - name: Vérifier la connexion aux hosts
+      ping:
+    
+    - name: Afficher les informations du système
+      debug:
+        msg: "Déploiement sur {{ inventory_hostname }} ({{ ansible_distribution }} {{ ansible_distribution_version }})"
+  
+  roles:
+    - role: docker
+      tags: docker
+    
+    - role: nextcloud
+      tags: nextcloud
+      when: services.nextcloud.enabled | default(true)
+    
+    - role: portainer
+      tags: portainer
+      when: services.portainer.enabled | default(true)
+    
+    - role: immich
+      tags: immich
+      when: services.immich.enabled | default(true)
+  
+  post_tasks:
+    - name: Afficher le statut des conteneurs
+      command: docker ps
+      register: docker_status
+      changed_when: false
+    
+    - name: Résumé du déploiement
+      debug:
+        msg: |
+          ✅ Déploiement terminé !
+          
+          Services déployés :
+          {% if services.nextcloud.enabled | default(true) %}
+          - Nextcloud: http://{{ ansible_default_ipv4.address }}:{{ services.nextcloud.ports.http }}
+          - PhpMyAdmin: http://{{ ansible_default_ipv4.address }}:{{ services.nextcloud.ports.phpmyadmin }}
+          {% endif %}
+          {% if services.portainer.enabled | default(true) %}
+          - Portainer: https://{{ ansible_default_ipv4.address }}:{{ services.portainer.ports.https }}
+          {% endif %}
+          {% if services.immich.enabled | default(true) %}
+          - Immich: http://{{ ansible_default_ipv4.address }}:{{ services.immich.ports.http }}
+          {% endif %}

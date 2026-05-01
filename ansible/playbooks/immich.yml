@@ -1,0 +1,25 @@
+---
+# Playbook pour le déploiement d'Immich uniquement
+# Usage: ansible-playbook playbooks/immich.yml
+
+- name: Déploiement d'Immich
+  hosts: immich_servers
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: docker
+      tags: docker
+    
+    - role: immich
+      tags: immich
+  
+  post_tasks:
+    - name: Vérifier le statut d'Immich
+      command: docker ps --filter "name=immich"
+      register: immich_status
+      changed_when: false
+    
+    - name: Afficher le statut
+      debug:
+        var: immich_status.stdout_lines
