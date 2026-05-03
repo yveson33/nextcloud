@@ -9,6 +9,11 @@ docker/portainer/data
 docker/nextcloud/data
 docker/immich/data
 
+# Ignorer les éléments spécifiques à Immich
+.immich
+www/immich
+
+
 .idea
 
 
