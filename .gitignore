@@ -12,12 +12,18 @@ docker/immich/data
 # Ignorer les éléments spécifiques à Immich
 .immich
 www/immich
+docker/immich/www/immich/machine_server/backups/.immich
+docker/immich/www/immich/machine_server/encoded-video/.immich
+docker/immich/www/immich/machine_server/library/.immich
+docker/immich/www/immich/machine_server/upload/.immich
+docker/immich/www/immich/machine_server/profile/.immich
+docker/immich/www/immich/machine_server/thumbs/.immich
 
 
 .idea
 
 
 www/data
-www/immich
 www/nextcloud
 /docker/portainer/data/
+/docker/portainer/data/portainer/*
