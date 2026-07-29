@@ -29,9 +29,10 @@ services:
       disable: false
     networks:
       - personnal_nextcloud
-    # Utilise le Redis de Nextcloud
-    external_links:
-      - nextcloud_redis:redis
+    # Utilise le Redis de Nextcloud (external_links ne fonctionne pas sur un réseau custom)
+    environment:
+      REDIS_HOSTNAME: NEXTCLOUD_REDIS
+      REDIS_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD}
 
   immich-machine-learning:
     container_name: ${PROJECT_NAME}_immich_machine_learning
