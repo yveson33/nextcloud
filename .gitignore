@@ -27,3 +27,5 @@ www/data
 www/nextcloud
 /docker/portainer/data/
 /docker/portainer/data/portainer/*
+
+__pycache__
