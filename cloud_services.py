@@ -20,7 +20,7 @@ class DockerServiceManager:
     
     def __init__(self, base_path: str = None):
         """Initialise le gestionnaire avec les chemins des services."""
-        self.current_path = Path(base_path) if base_path else Path.cwd()
+        self.current_path = Path(base_path) if base_path else Path(__file__).resolve().parent
         
         # Variables des services avec leurs chemins (ordre important pour les dépendances)
         self.services: Dict[str, Path] = {
