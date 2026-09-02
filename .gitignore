@@ -28,3 +28,7 @@ docker/portainer/data/portainer/portainer.db
 docker/portainer/data/portainer/docker_config/config.json
 
 __pycache__
+
+# Résidu vide créé par Docker avant la bascule de la configuration Syncthing
+# sur un volume nommé. Appartient à root, supprimable.
+docker/syncthing/data

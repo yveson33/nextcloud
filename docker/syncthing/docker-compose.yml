@@ -1,0 +1,49 @@
+name: syncthing
+
+# Syncthing dépose les photos du téléphone directement dans la bibliothèque
+# externe d'Immich, qui les indexe ensuite par son scan périodique.
+#
+# Pourquoi ce détour plutôt que la sauvegarde intégrée de l'application Immich :
+#   - l'API d'upload d'Immich écrit le fichier puis rejette la requête sans
+#     trace dans les logs, laissant des orphelins qui remplissent le disque ;
+#   - l'application mobile refuse les certificats auto-signés.
+# Ici rien ne passe par cette API, et le transport de Syncthing est chiffré
+# indépendamment de TLS.
+
+services:
+  syncthing:
+    container_name: ${PROJECT_NAME:-NEXTCLOUD}_SYNCTHING
+    image: syncthing/syncthing:latest
+    hostname: ${SYNCTHING_HOSTNAME:-yves-nas-hp}
+    # L'image officielle ne connaît pas PUID/PGID (ce sont des variables des
+    # images LinuxServer) : l'utilisateur se fixe ici. Les fichiers déposés
+    # appartiennent ainsi à yves, comme le reste de la bibliothèque externe.
+    user: '${PUID:-1000}:${PGID:-1000}'
+    volumes:
+      # Volume nommé plutôt qu'un bind mount : Syncthing abandonne ses
+      # privilèges pour PUID, et ne peut donc pas écrire dans un répertoire
+      # hôte créé par Docker en root. Ce sont de toute façon des clés et un
+      # identifiant d'appareil, pas des données à consulter à la main.
+      - syncthing_config:/var/syncthing/config
+      # Destination des photos : le dossier même qu'Immich indexe.
+      # En écriture, contrairement au montage d'Immich qui reste en lecture seule.
+      - ${EXTERNAL_MEDIA_PATH:-/home/yves/media/photos}/yves:/var/syncthing/photos-yves
+    ports:
+      # Interface d'administration, exposée sur la boucle locale uniquement :
+      # elle n'est pas protégée par mot de passe au premier démarrage.
+      - '127.0.0.1:8384:8384'
+      # Protocole de synchronisation (TCP et QUIC).
+      - '22000:22000/tcp'
+      - '22000:22000/udp'
+      # Découverte des pairs sur le réseau local.
+      - '21027:21027/udp'
+    restart: always
+    networks:
+      - personal_cloud
+
+volumes:
+  syncthing_config:
+
+networks:
+  personal_cloud:
+    external: true
