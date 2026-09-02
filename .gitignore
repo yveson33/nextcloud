@@ -12,12 +12,9 @@ docker/immich/data
 # Ignorer les éléments spécifiques à Immich
 .immich
 www/immich
-docker/immich/www/immich/machine_server/backups/.immich
-docker/immich/www/immich/machine_server/encoded-video/.immich
-docker/immich/www/immich/machine_server/library/.immich
-docker/immich/www/immich/machine_server/upload/.immich
-docker/immich/www/immich/machine_server/profile/.immich
-docker/immich/www/immich/machine_server/thumbs/.immich
+# Stockage runtime d'Immich : vignettes, transcodages, uploads et modèles ML.
+# Des dizaines de milliers de fichiers, tous régénérables par le serveur.
+docker/immich/www/immich/
 
 
 .idea
