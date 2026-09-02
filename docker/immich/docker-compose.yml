@@ -24,14 +24,15 @@ services:
       - '2283:2283'
     depends_on:
       - database
+      - redis
     restart: always
     healthcheck:
       disable: false
     networks:
       - personal_cloud
-    # Utilise le Redis de Nextcloud (external_links ne fonctionne pas sur un réseau custom)
+    # Redis dédié à Immich (la stack Nextcloud est désormais arrêtée)
     environment:
-      REDIS_HOSTNAME: NEXTCLOUD_REDIS
+      REDIS_HOSTNAME: ${PROJECT_NAME}_immich_redis
       REDIS_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD}
 
   immich-machine-learning:
@@ -47,6 +48,21 @@ services:
     restart: always
     healthcheck:
       disable: false
+    networks:
+      - personal_cloud
+
+  redis:
+    container_name: ${PROJECT_NAME}_immich_redis
+    image: redis:latest
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDISCLI_AUTH" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDISCLI_AUTH: ${NEXTCLOUD_REDIS_PASSWORD}
+    restart: always
     networks:
       - personal_cloud
 
