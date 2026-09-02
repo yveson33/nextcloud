@@ -29,3 +29,5 @@ www/nextcloud
 /docker/portainer/data/portainer/*
 docker/portainer/data/portainer/portainer.db
 docker/portainer/data/portainer/docker_config/config.json
+
+__pycache__

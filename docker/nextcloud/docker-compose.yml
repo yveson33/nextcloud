@@ -128,11 +128,4 @@ services:
 
 networks:
   personal_cloud:
-    #"" external: true
-    # Options supplémentaires pour le réseau externe
-    driver: bridge
-    # Si vous voulez créer le réseau automatiquement, remplacez par :
-    # driver: bridge
-    # ipam:
-    #   config:
-    #     - subnet: 172.20.0.0/16
+    external: true

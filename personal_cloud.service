@@ -4,15 +4,15 @@ After=network.target docker.service
 Requires=docker.service
 
 [Service]
-Type=simple
+Type=oneshot
+RemainAfterExit=yes
 User=yves
 WorkingDirectory=/home/yves/sites/nextcloud
 ExecStart=/usr/bin/python3 /home/yves/sites/nextcloud/cloud_services.py start
 ExecStop=/usr/bin/python3 /home/yves/sites/nextcloud/cloud_services.py stop
 ExecReload=/usr/bin/python3 /home/yves/sites/nextcloud/cloud_services.py restart
-Restart=always
 Environment=PATH=/bin:/usr/bin:/usr/local/bin
-TimeoutStartSec=30
+TimeoutStartSec=600
 TimeoutStopSec=30
 
 [Install]
