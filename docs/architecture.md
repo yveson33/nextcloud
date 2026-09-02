@@ -67,13 +67,21 @@ et n'a jamais été affecté — le bug ne touchait que les deux stacks ajoutée
 > touchées, seulement ignorées. Le contrôle qui l'a révélé :
 > `docker inspect <conteneur> --format '{{range .Mounts}}{{.Source}}{{end}}'`.
 
-### Redis n'a aucun volume
+### Persistance du Redis d'Immich
 
-Les données du Redis d'Immich vivent dans la couche éphémère du conteneur.
-Acceptable pour une file de travaux, qui se reconstitue — mais cela explique que
-les travaux de détection de visages mis en file pendant les mises à jour aient
-**disparu** au lieu d'être rejoués : ils étaient dans Redis, effacé à chaque
-recréation du conteneur.
+Le Redis d'Immich persiste sur `docker/immich/data/redis`, par instantanés RDB.
+Sans ce volume, la file de travaux vivait dans la couche éphémère du conteneur :
+les travaux de détection de visages mis en file pendant les mises à jour ont
+ainsi **disparu** au lieu d'être rejoués.
+
+Pas d'AOF : les instantanés suffisent pour une file, et redis écrit un
+instantané sur SIGTERM, donc un `docker compose down` ne perd rien.
+
+> **Immich en amont ne persiste délibérément pas son Redis.** L'inconvénient de
+> ce choix est qu'après une mise à jour majeure, des travaux sérialisés par
+> l'ancienne version peuvent être rejoués et échouer. En cas de comportement
+> étrange après un saut de version, vider la file est sans risque :
+> `docker compose down redis && rm -rf data/redis && docker compose up -d redis`.
 
 ## Stockage des photos
 

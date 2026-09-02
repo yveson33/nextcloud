@@ -81,6 +81,14 @@ services:
       retries: 5
     environment:
       REDISCLI_AUTH: ${NEXTCLOUD_REDIS_PASSWORD}
+    volumes:
+      # Immich en amont ne persiste pas son Redis. On le fait ici pour que la
+      # file de travaux (détection de visages, vignettes) survive à une
+      # recréation du conteneur, sinon les travaux en attente disparaissent
+      # silencieusement au lieu d'être rejoués.
+      # Instantanés RDB, pas d'AOF : suffisant pour une file, et redis écrit un
+      # instantané sur SIGTERM, donc un "docker compose down" ne perd rien.
+      - ./data/redis:/data
     restart: always
     networks:
       - personal_cloud
