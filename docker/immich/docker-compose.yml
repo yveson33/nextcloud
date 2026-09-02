@@ -22,7 +22,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
       # Bibliothèque externe : Immich indexe ces fichiers sur place, sans les
       # copier. Monté en lecture seule pour qu'il ne puisse jamais les modifier.
-      - ${EXTERNAL_MEDIA_PATH:-/home/yves/media/photos}:/mnt/media:ro
+      # Le chemin conteneur (/mnt/media) ne doit jamais changer : les 10 151
+      # originalPath enregistrés en base en dépendent.
+      - ${EXTERNAL_MEDIA_PATH:-./www/immich/external}:/mnt/media:ro
     ports:
       - '2283:2283'
     depends_on:

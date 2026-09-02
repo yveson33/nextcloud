@@ -62,19 +62,48 @@ soit l'endroit d'où la commande est lancée.
 
 ## Stockage des photos
 
+Tout vit sous **`docker/immich/`**, qui est donc le seul chemin à sauvegarder :
+
 ```
-/home/yves/media/photos/
-├── yves/       37 Go, 7027 médias
-└── heloise/    30 Go, 3124 médias
+docker/immich/
+├── data/postgres/                    594 Mo   base de données
+└── www/immich/
+    ├── external/                      67 Go   historique migré de Nextcloud
+    │   ├── yves/                      37 Go   7027 médias
+    │   └── heloise/                   30 Go   3124 médias
+    ├── machine_server/               8,0 Go
+    │   ├── library/                          photos envoyées par l'app mobile
+    │   ├── thumbs/                           vignettes (régénérables)
+    │   └── encoded-video/                    transcodages (régénérables)
+    └── machine_learning/             786 Mo   modèles CLIP (régénérables)
 ```
 
-Monté **en lecture seule** sur `/mnt/media` dans `immich-server`, via
-`EXTERNAL_MEDIA_PATH`. Immich les indexe en **bibliothèque externe** : il lit les
-fichiers sur place, sans jamais les copier ni pouvoir les modifier.
+`external/` est monté **en lecture seule** sur `/mnt/media` dans
+`immich-server`, via `EXTERNAL_MEDIA_PATH`. Immich l'indexe en **bibliothèque
+externe** : il lit les fichiers sur place, sans jamais les copier ni pouvoir les
+modifier.
 
 Deux bibliothèques déclarées, une par utilisateur — `/mnt/media/yves` et
 `/mnt/media/heloise`. Immich ne permet pas de transférer une bibliothèque d'un
 propriétaire à l'autre après création.
+
+> **Le chemin conteneur `/mnt/media` ne doit jamais changer.** Les 10 151
+> `originalPath` enregistrés en base en dépendent. C'est ce qui a permis de
+> déplacer les 67 Go depuis `/home/yves/media/photos` sans toucher à la base :
+> seul le côté hôte du montage a été modifié.
+
+### Sauvegarde
+
+Sauvegarder `docker/immich/` couvre tout. Pour une sauvegarde minimale, deux
+sous-ensembles suffisent — le reste se régénère :
+
+| À sauvegarder | Pourquoi |
+|---|---|
+| `www/immich/external/` | originaux irremplaçables |
+| `www/immich/machine_server/library/` | photos du mobile, irremplaçables |
+| `data/postgres/` (par `pg_dump`) | albums, visages, métadonnées |
+
+Les vignettes, transcodages et modèles ML représentent ~13 Go régénérables.
 
 ### Pourquoi la bibliothèque externe plutôt qu'un import
 
@@ -94,12 +123,13 @@ L'application Immich sauvegarde les photos du téléphone via son API, sur
 propre d'Immich (`docker/immich/www/immich/machine_server/library/`), et non dans
 la bibliothèque externe qui reste en lecture seule.
 
-Les photos sont donc réparties sur **deux emplacements physiques** :
-l'historique migré depuis Nextcloud dans `/home/yves/media/photos/`, et les
-nouvelles dans le stockage d'Immich. C'est invisible dans l'application — même
-chronologie, mêmes albums — mais les nouvelles photos consomment désormais leur
-taille réelle sur le disque, contrairement à la bibliothèque externe qui ne coûte
-que ses vignettes.
+Les photos occupent deux sous-arbres distincts — `external/` pour l'historique,
+`machine_server/library/` pour les envois du mobile — mais **sous une seule
+racine**, `docker/immich/`. C'est invisible dans l'application : même
+chronologie, mêmes albums.
+
+La différence est ailleurs : les nouvelles photos consomment leur taille réelle
+sur le disque, alors que la bibliothèque externe ne coûte que ses vignettes.
 
 > **Syncthing a été retiré.** Il avait été mis en place le 2026-09-02 pour
 > contourner l'API d'upload, alors défaillante. La mise à jour en v3.1.0 ayant
