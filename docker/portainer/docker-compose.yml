@@ -12,8 +12,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     
 networks:
-  personnal_nextcloud:
+  personal_cloud:
     external: true

@@ -121,7 +121,7 @@ class DockerServiceManager:
         Args:
             action: Action à effectuer (start, stop)
         """
-        network_name = "personnal_nextcloud"
+        network_name = "personal_cloud"
         
         if action == "start":
             print(f"🌐 Création du réseau Docker: {network_name}")
@@ -168,19 +168,21 @@ class DockerServiceManager:
         print("=== Gestion des services cloud ===")
         print(f"Action: {action_text}")
         print()
-        
+
         # Gestion du réseau pour start/stop
         if action == "start":
             self.manage_network("start")
         elif action == "stop":
             self.manage_network("stop")
-        
+
         print()
-        
+
         # Gestion de chaque service
+        # NOTE: Nextcloud est déprécié et n'est plus géré par défaut.
+        # Utilisez manage_service("nextcloud", ...) directement pour le gérer manuellement.
         success = True
-        services_list = ["nextcloud", "portainer", "immich"]
-        
+        services_list = ["immich", "portainer"]
+
         for service_name in services_list:
             service_path = self.services.get(service_name)
             if service_path:
@@ -211,36 +213,47 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Actions disponibles:
-  start    - Démarrer tous les services
-  stop     - Arrêter tous les services
-  restart  - Redémarrer tous les services
-  status   - Afficher le statut des conteneurs
+  start      - Démarrer les services par défaut (immich, portainer)
+  stop       - Arrêter les services par défaut
+  restart    - Redémarrer les services par défaut
+  status     - Afficher le statut des conteneurs
+  nextcloud  - Gérer manuellement Nextcloud (déprécié), ex: nextcloud start
 
-Services gérés:
-  • nextcloud: ./nextcloud
-  • portainer: ./common/portainer
-  • immich: ./immich
+Services gérés par défaut:
+  • immich: ./docker/immich
+  • portainer: ./docker/portainer
+
+Service déprécié (manuel uniquement):
+  • nextcloud: ./docker/nextcloud
         """
     )
-    
+
     parser.add_argument(
         "action",
-        choices=["start", "stop", "restart", "status"],
+        choices=["start", "stop", "restart", "status", "nextcloud"],
         help="Action à effectuer"
     )
-    
+
+    parser.add_argument(
+        "nextcloud_action",
+        nargs="?",
+        choices=["start", "stop", "restart"],
+        default=None,
+        help="Sous-action pour 'nextcloud' (start, stop, restart)"
+    )
+
     parser.add_argument(
         "--path",
         type=str,
         default=None,
         help="Chemin de base pour les services (défaut: répertoire courant)"
     )
-    
+
     args = parser.parse_args()
-    
+
     # Initialisation du gestionnaire
     manager = DockerServiceManager(base_path=args.path)
-    
+
     # Exécution de l'action
     action_icons = {
         "restart": "🔄",
@@ -248,15 +261,24 @@ Services gérés:
         "stop": "🛑",
         "status": "📊"
     }
-    
-    icon = action_icons.get(args.action, "▶️")
-    print(f"{icon} {manager.actions.get(args.action, args.action).title()} des conteneurs cloud")
-    print()
-    
+
     if args.action == "status":
+        icon = action_icons.get(args.action, "▶️")
+        print(f"{icon} {manager.actions.get(args.action, args.action).title()} des conteneurs cloud")
+        print()
         manager.show_status()
         sys.exit(0)
+    elif args.action == "nextcloud":
+        if not args.nextcloud_action:
+            print("❌ Usage: cloud_services.py nextcloud {start|stop|restart}")
+            sys.exit(1)
+        print(f"⚠️  Nextcloud est déprécié : gestion manuelle demandée ({args.nextcloud_action})")
+        ok = manager.manage_service("nextcloud", manager.services["nextcloud"], args.nextcloud_action)
+        sys.exit(0 if ok else 1)
     else:
+        icon = action_icons.get(args.action, "▶️")
+        print(f"{icon} {manager.actions.get(args.action, args.action).title()} des conteneurs cloud")
+        print()
         success = manager.manage_all_services(args.action)
         sys.exit(0 if success else 1)
 

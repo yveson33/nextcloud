@@ -18,7 +18,7 @@ services:
     env_file:
       - db.env
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     # Sécurité : pas d'exposition directe de la base de données
     expose:
       - "3306"
@@ -34,7 +34,7 @@ services:
       - ./redis/redis.conf:/redis.conf
     command: [ "redis-server", "/redis.conf" ]
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     expose:
       - "6379"
 
@@ -47,7 +47,7 @@ services:
     ports:
       - 5540:5540
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     depends_on:
       - redis
 
@@ -68,7 +68,7 @@ services:
       - TZ=Europe/Paris
       - SERVER_NAME=${SERVER_NAME}
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     env_file:
       - ../../www/.cloudenv
       - db.env
@@ -101,7 +101,7 @@ services:
     volumes_from:
       - app
     networks:
-      - personnal_nextcloud
+      - personal_cloud
 
   #######################################
   # Phpmyadmin
@@ -117,7 +117,7 @@ services:
     depends_on:
       - db
     networks:
-      - personnal_nextcloud
+      - personal_cloud
     environment:
       - PMA_HOST=db
       - PMA_PORT=3306
@@ -127,7 +127,7 @@ services:
       - "8081"
 
 networks:
-  personnal_nextcloud:
+  personal_cloud:
     #"" external: true
     # Options supplémentaires pour le réseau externe
     driver: bridge

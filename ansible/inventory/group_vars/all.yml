@@ -11,7 +11,7 @@ base_path: "/Users/yves/Documents/Sites/nextcloud"
 # base_path: "/opt/nextcloud"
 
 # Configuration réseau
-docker_network_name: "personnal_nextcloud"
+docker_network_name: "personal_cloud"
 docker_network_driver: "bridge"
 docker_network_subnet: "172.20.0.0/16"
 

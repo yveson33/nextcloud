@@ -1,20 +1,21 @@
-# Personal Nextcloud Stack
+# Personal Cloud Stack
 
-Un stack Docker complet pour héberger votre propre cloud personnel avec Nextcloud, Portainer et Immich.
+Un stack Docker pour héberger votre propre cloud personnel avec Immich et Portainer. Nextcloud est **déprécié** et n'est plus démarré par défaut (voir [Nextcloud (déprécié)](#nextcloud-déprécié)).
 
 ## 🏗️ Architecture
 
-Ce projet orchestre trois services principaux via Docker Compose :
+Ce projet orchestre par défaut deux services via Docker Compose :
 
-- **Nextcloud** : Plateforme de stockage et collaboration cloud
+- **Immich** : Solution de gestion de photos et vidéos (service principal)
 - **Portainer** : Interface de gestion Docker
-- **Immich** : Solution de gestion de photos et vidéos
+
+- ~~**Nextcloud** : Plateforme de stockage et collaboration cloud~~ (déprécié, gestion manuelle uniquement)
 
 ## 📁 Structure du projet
 
 ```
 #nextcloud/
-├── personnal_nextcloud # Script de gestion principal (bash)
+├── personal_cloud # Script de gestion principal (bash)
 ├── cloud_services.py # Script de gestion principal (Python)
 ├── docker/ # Services Docker
 │ ├── nextcloud/ # Service Nextcloud
@@ -31,7 +32,7 @@ Ce projet orchestre trois services principaux via Docker Compose :
 ### Prérequis
 
 - Docker et Docker Compose installés
-- Ports 80, 443, 8081, 9443, 2283 disponibles
+- Ports 9443, 2283 disponibles par défaut (+ 80, 443, 8081 si Nextcloud est démarré manuellement)
 
 ### Démarrage rapide
 
@@ -40,39 +41,45 @@ Ce projet orchestre trois services principaux via Docker Compose :
 git clone <votre-repo>
 cd nextcloud
 
-# Démarrer tous les services
-./personnal_nextcloud start
+# Démarrer les services par défaut (Immich + Portainer)
+./personal_cloud start
 
 # Vérifier le statut
-./personnal_nextcloud status
+./personal_cloud status
 ```
 
 ### Script de gestion
 
-Le script `personnal_nextcloud` permet de gérer l'ensemble des services :
+Le script `personal_cloud` permet de gérer l'ensemble des services :
 
 ```bash
-# Démarrer tous les services
-./personnal_nextcloud start
+# Démarrer les services par défaut (Immich + Portainer)
+./personal_cloud start
 
-# Arrêter tous les services
-./personnal_nextcloud stop
+# Arrêter les services par défaut
+./personal_cloud stop
 
-# Redémarrer tous les services
-./personnal_nextcloud restart
+# Redémarrer les services par défaut
+./personal_cloud restart
 
 # Afficher le statut des conteneurs
-./personnal_nextcloud status
+./personal_cloud status
+
+# Gérer manuellement Nextcloud (déprécié)
+./personal_cloud nextcloud start
+./personal_cloud nextcloud stop
 ```
+
+Le script Python `cloud_services.py` propose les mêmes actions (`start`, `stop`, `restart`, `status`, `nextcloud <start|stop|restart>`).
 
 ## 🌐 Accès aux services
 
 | Service | URL | Port | Description |
 |---------|-----|------|-------------|
-| **Nextcloud** | `http://localhost` | 80/443 | Interface principale |
-| **PhpMyAdmin** | `http://localhost:8081` | 8081 | Gestion base de données |
+| **Immich** | `http://localhost:2283` | 2283 | Interface principale (photos/vidéos) |
 | **Portainer** | `https://localhost:9443` | 9443 | Interface Docker |
-| **Immich** | `http://localhost:2283` | 2283 | Gestion photos/vidéos |
+| **Nextcloud** (déprécié) | `http://localhost` | 80/443 | Démarrage manuel uniquement |
+| **PhpMyAdmin** (déprécié) | `http://localhost:8081` | 8081 | Lié à Nextcloud, démarrage manuel uniquement |
 
 ## ⚙️ Configuration
 
@@ -97,25 +104,31 @@ POSTGRES_DB_NAME=immich
 
 ### Réseau Docker
 
-Le projet utilise un réseau Docker partagé `personnal_nextcloud` pour permettre la communication entre les services.
+Le projet utilise un réseau Docker partagé `personal_cloud` pour permettre la communication entre les services.
 
 ## 🔧 Services détaillés
 
-### Nextcloud
+### Immich (service par défaut)
+- Gestion de photos et vidéos
+- Reconnaissance faciale et IA
+- Partage et synchronisation
+
+### Portainer
+- Interface web pour la gestion des conteneurs Docker
+- Accès sécurisé via HTTPS
+
+### Nextcloud (déprécié)
 - **Base de données** : MariaDB
 - **Cache** : Redis
 - **Serveur web** : Nginx
 - **Application** : PHP-FPM Alpine personnalisé
 - **Interface admin** : PhpMyAdmin
 
-### Portainer
-- Interface web pour la gestion des conteneurs Docker
-- Accès sécurisé via HTTPS
+Nextcloud n'est plus démarré automatiquement. Le code, les données (`data/nextcloud/`, `data/mysql/`) et le docker-compose restent dans le repo pour permettre un redémarrage manuel :
 
-### Immich
-- Gestion de photos et vidéos
-- Reconnaissance faciale et IA
-- Partage et synchronisation
+```bash
+./personal_cloud nextcloud start
+```
 
 ## 📊 Surveillance et logs
 
@@ -148,7 +161,7 @@ Les données sont stockées dans le dossier `data/` :
 ### Mise à jour
 ```bash
 # Redémarrer avec les dernières images
-./personnal_nextcloud restart
+./personal_cloud restart
 ```
 
 ## 🐛 Dépannage
@@ -157,7 +170,7 @@ Les données sont stockées dans le dossier `data/` :
 
 1. **Port déjà utilisé** : Vérifiez qu'aucun autre service n'utilise les ports 80, 443, 8081, 9443, 2283
 2. **Permissions** : Assurez-vous que Docker a les permissions nécessaires
-3. **Réseau** : Le réseau `personnal_nextcloud` doit être créé automatiquement
+3. **Réseau** : Le réseau `personal_cloud` doit être créé automatiquement
 
 ### Logs utiles
 ```bash
@@ -173,7 +186,7 @@ docker logs nextcloud_immich_server
 
 ## 📝 Notes
 
-- Le script `personnal_nextcloud` gère automatiquement la création/suppression du réseau Docker
+- Le script `personal_cloud` gère automatiquement la création/suppression du réseau Docker
 - Les données sont persistantes grâce aux volumes Docker
 - Configuration optimisée pour un usage personnel/semi-professionnel
 
