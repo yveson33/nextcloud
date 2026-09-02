@@ -28,3 +28,6 @@ docker/portainer/data/portainer/portainer.db
 docker/portainer/data/portainer/docker_config/config.json
 
 __pycache__
+
+# État Tailscale (clé de nœud, identité de la machine)
+docker/tailscale/data

@@ -1,0 +1,36 @@
+name: tailscale
+
+# Tailscale place la machine entière sur un réseau privé chiffré (WireGuard),
+# ce qui rend Immich et Portainer joignables depuis l'extérieur sans ouvrir le
+# moindre port sur la box. Le gain principal est la sauvegarde photo du mobile
+# en déplacement : aujourd'hui elle ne fonctionne que sur le Wi-Fi domestique.
+#
+# À noter : Tailscale est un outil d'ACCÈS, pas de redondance. Il ne protège en
+# rien les 71 Go de photos, qui n'existent toujours que sur ce seul disque.
+
+services:
+  tailscale:
+    container_name: ${PROJECT_NAME:-NEXTCLOUD}_TAILSCALE
+    image: tailscale/tailscale:latest
+    hostname: ${TS_HOSTNAME:-yves-nas-hp}
+    # Le réseau de l'hôte plutôt qu'un réseau Docker : c'est ce qui rend tous
+    # les services déjà publiés (Immich 443/2283, Portainer 9443) joignables via
+    # l'adresse du tailnet, sans avoir à router quoi que ce soit.
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_HOSTNAME: ${TS_HOSTNAME:-yves-nas-hp}
+      # Pas de TS_AUTHKEY : l'authentification se fait une seule fois par une
+      # URL affichée dans les journaux du conteneur, ce qui évite de stocker un
+      # secret dans le dépôt. L'état est ensuite conservé dans le volume.
+      TS_USERSPACE: "false"
+    volumes:
+      # Chemin relatif et non $PWD, résolu par rapport à ce fichier — voir la
+      # section "Chemins des volumes" de docs/architecture.md.
+      - ./data/state:/var/lib/tailscale
+    restart: always

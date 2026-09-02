@@ -26,7 +26,8 @@ class DockerServiceManager:
         self.services: Dict[str, Path] = {
             "nextcloud": self.current_path / "docker/nextcloud",
             "portainer": self.current_path / "docker/portainer",
-            "immich": self.current_path / "docker/immich"
+            "immich": self.current_path / "docker/immich",
+            "tailscale": self.current_path / "docker/tailscale"
         }
         
         # Variables des actions disponibles
@@ -181,7 +182,7 @@ class DockerServiceManager:
         # NOTE: Nextcloud est déprécié et n'est plus géré par défaut.
         # Utilisez manage_service("nextcloud", ...) directement pour le gérer manuellement.
         success = True
-        services_list = ["immich", "portainer"]
+        services_list = ["immich", "portainer", "tailscale"]
 
         for service_name in services_list:
             service_path = self.services.get(service_name)
@@ -213,7 +214,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Actions disponibles:
-  start      - Démarrer les services par défaut (immich, portainer)
+  start      - Démarrer les services par défaut (immich, portainer, tailscale)
   stop       - Arrêter les services par défaut
   restart    - Redémarrer les services par défaut
   status     - Afficher le statut des conteneurs
@@ -222,6 +223,7 @@ Actions disponibles:
 Services gérés par défaut:
   • immich: ./docker/immich
   • portainer: ./docker/portainer
+  • tailscale: ./docker/tailscale (accès distant)
 
 Service déprécié (manuel uniquement):
   • nextcloud: ./docker/nextcloud

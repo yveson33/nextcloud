@@ -19,6 +19,7 @@ Nextcloud est **déprécié et arrêté**. Immich l'a remplacé pour les photos.
 | `NEXTCLOUD_IMMICH_immich_redis` | `redis:latest` | interne |
 | `NEXTCLOUD_IMMICH_immich_machine_learning` | `immich-machine-learning:v3` | interne |
 | `NEXTCLOUD_PORTAINER` | `portainer-ce:latest` | `9443` |
+| `NEXTCLOUD_TAILSCALE` | `tailscale/tailscale:latest` | réseau de l'hôte |
 
 Tous sur le réseau Docker **`personal_cloud`**. L'ancien réseau
 `personnal_nextcloud` a été supprimé : les conteneurs y étaient encore attachés
@@ -29,8 +30,8 @@ up` de la stack Immich.
 
 Unité systemd **`personal_cloud.service`** (anciennement
 `nextcloud_personnal.service`, renommée pour correspondre au dépôt). Elle appelle
-`cloud_services.py`, qui crée le réseau puis démarre `immich` et `portainer`.
-Nextcloud en est **volontairement exclu**.
+`cloud_services.py`, qui crée le réseau puis démarre `immich`, `portainer` et
+`tailscale`. Nextcloud en est **volontairement exclu**.
 
 ```bash
 ./personal_cloud start|stop|restart|status
@@ -176,6 +177,46 @@ La sauvegarde a deux interrupteurs distincts : **avant-plan** (application
 ouverte) et **arrière-plan**, souvent désactivé par défaut. Sur Android, il faut
 aussi retirer l'application de l'optimisation de batterie, sans quoi le système
 tue le service.
+
+## Accès distant
+
+Tailscale place la machine entière sur un réseau privé chiffré (WireGuard).
+Immich et Portainer deviennent joignables depuis l'extérieur **sans ouvrir le
+moindre port** sur la box.
+
+| | |
+|---|---|
+| Nom | `yves-nas-hp.tail84afe.ts.net` |
+| Adresse | `100.86.127.65` |
+| Tailnet | `bissaya@gmail.com`, MagicDNS actif |
+
+L'adresse à saisir dans l'application mobile Immich :
+
+```
+http://yves-nas-hp.tail84afe.ts.net:2283
+```
+
+Le nom plutôt que l'adresse, qui peut changer. Sans cela, la sauvegarde photo ne
+fonctionne que sur le Wi-Fi domestique.
+
+`network_mode: host` plutôt qu'un réseau Docker : c'est ce qui rend joignables
+tous les services déjà publiés, sans avoir à router quoi que ce soit.
+
+Pas de `TS_AUTHKEY` dans le dépôt — l'authentification se fait une seule fois par
+une URL affichée dans les journaux du conteneur, et l'état persiste ensuite dans
+`docker/tailscale/data/state`. Pour ré-authentifier :
+
+```bash
+docker logs NEXTCLOUD_TAILSCALE | grep -oE 'https://login.tailscale.com/a/[a-z0-9]+'
+```
+
+Le nom `*.ts.net` ne résout pas depuis le serveur lui-même : Tailscale tourne
+dans un conteneur et ne modifie pas le résolveur de l'hôte. Sans conséquence —
+les autres appareils du tailnet résolvent correctement.
+
+> **Tailscale est un outil d'accès, pas de redondance.** Il ne protège en rien
+> les 71 Go de photos, qui n'existent toujours que sur un seul disque.
+> Voir [Risque non couvert](#risque-non-couvert).
 
 ## TLS
 
@@ -325,6 +366,26 @@ Sur 6635 noms en corbeille, 6551 existaient à l'identique dans `files/`
 provenaient du dossier `Camera`, supprimé volontairement le 2026-08-31, dont la
 copie vers `Photos/` était incomplète.
 
+## Risque non couvert
+
+**Les 71 Go de photos originales n'existent qu'à un seul endroit.**
+
+```
+nvme0n1   238,5 Go   un seul disque, une seule partition
+/home/yves/backups/   dumps de la base uniquement, aucune photo
+```
+
+Aucun disque externe, aucune copie distante, aucun RAID. Une panne de ce SSD, un
+incendie ou un vol, et tout est perdu — y compris les photos que le téléphone y
+aura versées puis supprimées de sa pellicule si la libération d'espace est
+activée dans l'application Immich.
+
+Ni Tailscale ni Immich ne couvrent ce risque : ce sont des outils d'accès et
+d'organisation, pas de redondance. La sauvegarde de la base ne protège que les
+métadonnées, soit ce qui est le plus facile à reconstruire.
+
+C'est le chantier restant le plus important, et de loin.
+
 ## Chantiers ouverts
 
 **À faire**
@@ -335,13 +396,17 @@ copie vers `Photos/` était incomplète.
 - **Surveiller la croissance du disque** : les photos envoyées par l'application
   consomment leur taille réelle, contrairement à la bibliothèque externe.
 
-**Si tu veux sauvegarder hors du réseau local**
+**Priorité**
 
-Aujourd'hui la sauvegarde mobile ne fonctionne qu'à la maison, en HTTP sur le
-LAN. Un VPN type Tailscale donnerait l'accès depuis n'importe où sans ouvrir de
-port, et fournit un certificat Let's Encrypt valide sur un nom `*.ts.net` — ce
-qui lèverait la limite de l'auto-signé et permettrait de fermer `443` et `2283`.
-Contrepartie : une dépendance à un service tiers pour le plan de contrôle.
+- **Sauvegarder les 71 Go de photos** — voir [Risque non couvert](#risque-non-couvert).
+  Un disque externe branché périodiquement couvre déjà la panne matérielle ; un
+  stockage distant chiffré couvre l'incendie et le vol.
+
+**Améliorations possibles**
+
+- **Certificat Let's Encrypt de Tailscale** sur `yves-nas-hp.tail84afe.ts.net`,
+  ce qui lèverait la limite de l'auto-signé, permettrait de basculer
+  l'application mobile en HTTPS et de fermer le port 2283.
 
 **Propreté**
 
