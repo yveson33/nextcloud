@@ -8,7 +8,12 @@ services:
     expose:
       - 9443
     volumes:
-      - $PWD/data/portainer:/data
+      # Chemin relatif et non $PWD : Compose le résout par rapport au
+      # répertoire de ce fichier, alors que $PWD dépend du répertoire courant de
+      # l'appelant. cloud_services.py lançant "docker compose -f <chemin absolu>"
+      # depuis la racine du dépôt, $PWD pointait à côté et Portainer démarrait
+      # avec une configuration vierge.
+      - ./data/portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     networks:

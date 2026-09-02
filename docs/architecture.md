@@ -43,22 +43,37 @@ Les conteneurs Nextcloud arrêtés référencent le réseau supprimé : un
 
 ### Chemins des volumes : ne jamais utiliser `$PWD`
 
-Le compose d'Immich utilisait `$PWD/data/postgres` pour ses montages. Or
+Les composes d'Immich et de Portainer utilisaient `$PWD` pour leurs montages. Or
 `cloud_services.py` — et donc le service systemd — appelle
 `docker compose -f <chemin absolu>` **depuis la racine du dépôt** : `$PWD` valait
-la racine et non `docker/immich`. Chaque démarrage par ce chemin montait donc
-postgres sur `/home/yves/sites/nextcloud/data/postgres`, un répertoire vide où
-postgres initialisait une base neuve — Immich démarrait sain, avec zéro photo.
+la racine et non le répertoire de la stack. Chaque démarrage par ce chemin
+montait donc les données à côté :
+
+| Stack | Chemin monté à tort | Conséquence |
+|---|---|---|
+| Immich | `data/postgres` | base neuve, Immich sain avec **zéro photo** |
+| Portainer | `data/portainer` | configuration vierge, compte à recréer |
 
 Les montages utilisent désormais des chemins **relatifs** (`./data/postgres`),
 que Compose résout par rapport au répertoire du fichier compose et non au
 répertoire courant du processus appelant. Le résultat est identique quel que
 soit l'endroit d'où la commande est lancée.
 
+Le compose de Nextcloud, lui, utilisait déjà des chemins relatifs (`../../data/mysql`)
+et n'a jamais été affecté — le bug ne touchait que les deux stacks ajoutées après.
+
 > Le symptôme était trompeur : conteneurs sains, API en 200, et une base
 > parfaitement fonctionnelle mais vide. Les vraies données n'avaient jamais été
 > touchées, seulement ignorées. Le contrôle qui l'a révélé :
 > `docker inspect <conteneur> --format '{{range .Mounts}}{{.Source}}{{end}}'`.
+
+### Redis n'a aucun volume
+
+Les données du Redis d'Immich vivent dans la couche éphémère du conteneur.
+Acceptable pour une file de travaux, qui se reconstitue — mais cela explique que
+les travaux de détection de visages mis en file pendant les mises à jour aient
+**disparu** au lieu d'être rejoués : ils étaient dans Redis, effacé à chaque
+recréation du conteneur.
 
 ## Stockage des photos
 
