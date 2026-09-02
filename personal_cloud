@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### BEGIN INIT INFO
-# Provides:          personnal_nextcloud
+# Provides:          personal_cloud
 # Required-Start:    $network $remote_fs docker
 # Required-Stop:     $network $remote_fs docker
 # Should-Start:      $time
@@ -86,17 +86,19 @@ function manage_all_services() {
     
     # Gestion du réseau pour start/stop
     if [ "$action" = "start" ]; then
-        echo "🌐 Création du réseau Docker: personnal_nextcloud"
-        docker network create personnal_nextcloud 2>/dev/null || echo "  ℹ️  Le réseau existe déjà"
+        echo "🌐 Création du réseau Docker: personal_cloud"
+        docker network create personal_cloud 2>/dev/null || echo "  ℹ️  Le réseau existe déjà"
     elif [ "$action" = "stop" ]; then
-        echo "🗑️  Suppression du réseau Docker: personnal_nextcloud"
-        docker network rm personnal_nextcloud 2>/dev/null || echo "  ℹ️  Le réseau n'existe pas"
+        echo "🗑️  Suppression du réseau Docker: personal_cloud"
+        docker network rm personal_cloud 2>/dev/null || echo "  ℹ️  Le réseau n'existe pas"
     fi
     
     echo ""
     
     # Gestion de chaque service via les variables
-    local services_list=("nextcloud" "portainer" "immich")
+    # NOTE: Nextcloud est déprécié et n'est plus démarré par défaut.
+    # Utilisez `./personal_cloud nextcloud <start|stop|restart>` pour le gérer manuellement.
+    local services_list=("immich" "portainer")
     for service_name in "${services_list[@]}"; do
         local service_path_var="services_$service_name"
         local service_path="${!service_path_var}"
@@ -133,21 +135,37 @@ case "$action" in
     "status" )
         show_status
         ;;
+    "nextcloud" )
+        sub_action=$2
+        case "$sub_action" in
+            "start"|"stop"|"restart" )
+                echo "⚠️  Nextcloud est déprécié : gestion manuelle demandée ($sub_action)"
+                manage_service "nextcloud" "$services_nextcloud" "$sub_action"
+                ;;
+            * )
+                echo "❌ Usage: $0 nextcloud {start|stop|restart}"
+                exit 1
+                ;;
+        esac
+        ;;
     * )
         echo "❌ Usage incorrect"
         echo ""
-        echo "Usage: $0 {start|stop|restart|status}"
+        echo "Usage: $0 {start|stop|restart|status|nextcloud <start|stop|restart>}"
         echo ""
         echo "Actions disponibles:"
-        echo "  start    - Démarrer tous les services"
-        echo "  stop     - Arrêter tous les services"
-        echo "  restart  - Redémarrer tous les services"
+        echo "  start    - Démarrer les services par défaut (immich, portainer)"
+        echo "  stop     - Arrêter les services par défaut"
+        echo "  restart  - Redémarrer les services par défaut"
         echo "  status   - Afficher le statut des conteneurs"
+        echo "  nextcloud <start|stop|restart> - Gérer manuellement Nextcloud (déprécié)"
         echo ""
-        echo "Services gérés:"
-        echo "  • nextcloud: $services_nextcloud"
-        echo "  • portainer: $services_portainer"
+        echo "Services gérés par défaut:"
         echo "  • immich: $services_immich"
+        echo "  • portainer: $services_portainer"
+        echo ""
+        echo "Service déprécié (manuel uniquement):"
+        echo "  • nextcloud: $services_nextcloud"
         exit 1
         ;;
 esac
