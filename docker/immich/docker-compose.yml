@@ -18,7 +18,7 @@ services:
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
     volumes:
       # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
-      - $PWD/www/immich/machine_server:/data
+      - ./www/immich/machine_server:/data
       - /etc/localtime:/etc/localtime:ro
       # Bibliothèque externe : Immich indexe ces fichiers sur place, sans les
       # copier. Monté en lecture seule pour qu'il ne puisse jamais les modifier.
@@ -47,7 +47,7 @@ services:
     #   file: hwaccel.ml.yml
     #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
     volumes:
-      - $PWD/www/immich/machine_learning:/cache
+      - ./www/immich/machine_learning:/cache
     restart: always
     healthcheck:
       disable: false
@@ -95,7 +95,7 @@ services:
       # DB_STORAGE_TYPE: 'HDD'
     volumes:
       # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
-      - $PWD/data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     restart: always
     networks:

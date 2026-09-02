@@ -14,11 +14,10 @@ Nextcloud est **déprécié et arrêté**. Immich l'a remplacé pour les photos.
 | Service | Image | Exposition |
 |---|---|---|
 | `NEXTCLOUD_IMMICH_immich_nginx` | build local | `443` (HTTPS), `80` (redirection) |
-| `NEXTCLOUD_IMMICH_IMMICH_SERVER` | `immich-server:v3` | `2283` (HTTP, à fermer) |
+| `NEXTCLOUD_IMMICH_IMMICH_SERVER` | `immich-server:v3` | `2283` (HTTP, requis par l'app mobile) |
 | `NEXTCLOUD_IMMICH_immich_postgres` | `postgres:14-vectorchord` | interne |
 | `NEXTCLOUD_IMMICH_immich_redis` | `redis:latest` | interne |
 | `NEXTCLOUD_IMMICH_immich_machine_learning` | `immich-machine-learning:v3` | interne |
-| `NEXTCLOUD_SYNCTHING` | `syncthing/syncthing:latest` | `22000`, `21027`, `8384` (local) |
 | `NEXTCLOUD_PORTAINER` | `portainer-ce:latest` | `9443` |
 
 Tous sur le réseau Docker **`personal_cloud`**. L'ancien réseau
@@ -30,8 +29,8 @@ up` de la stack Immich.
 
 Unité systemd **`personal_cloud.service`** (anciennement
 `nextcloud_personnal.service`, renommée pour correspondre au dépôt). Elle appelle
-`cloud_services.py`, qui crée le réseau puis démarre `immich`, `portainer` et
-`syncthing`. Nextcloud en est **volontairement exclu**.
+`cloud_services.py`, qui crée le réseau puis démarre `immich` et `portainer`.
+Nextcloud en est **volontairement exclu**.
 
 ```bash
 ./personal_cloud start|stop|restart|status
@@ -41,6 +40,25 @@ python3 cloud_services.py start          # ce que systemd exécute
 
 Les conteneurs Nextcloud arrêtés référencent le réseau supprimé : un
 `docker compose start` échouerait, il faut un `up -d` qui les recrée.
+
+### Chemins des volumes : ne jamais utiliser `$PWD`
+
+Le compose d'Immich utilisait `$PWD/data/postgres` pour ses montages. Or
+`cloud_services.py` — et donc le service systemd — appelle
+`docker compose -f <chemin absolu>` **depuis la racine du dépôt** : `$PWD` valait
+la racine et non `docker/immich`. Chaque démarrage par ce chemin montait donc
+postgres sur `/home/yves/sites/nextcloud/data/postgres`, un répertoire vide où
+postgres initialisait une base neuve — Immich démarrait sain, avec zéro photo.
+
+Les montages utilisent désormais des chemins **relatifs** (`./data/postgres`),
+que Compose résout par rapport au répertoire du fichier compose et non au
+répertoire courant du processus appelant. Le résultat est identique quel que
+soit l'endroit d'où la commande est lancée.
+
+> Le symptôme était trompeur : conteneurs sains, API en 200, et une base
+> parfaitement fonctionnelle mais vide. Les vraies données n'avaient jamais été
+> touchées, seulement ignorées. Le contrôle qui l'a révélé :
+> `docker inspect <conteneur> --format '{{range .Mounts}}{{.Source}}{{end}}'`.
 
 ## Stockage des photos
 
@@ -71,36 +89,40 @@ panne est **résolue** — voir [Incident de l'API d'upload](#incident-de-lapi-d
 
 ## Synchronisation mobile
 
-> **Syncthing est probablement devenu inutile.** Il a été mis en place quand
-> l'API d'upload était cassée. Depuis la mise à jour en v3.1.0 elle fonctionne,
-> donc la sauvegarde intégrée de l'application Immich devrait suffire. À tester
-> sur `http://192.168.1.199:2283` avant de décider de retirer ce service.
->
-> À noter : le certificat auto-signé n'a jamais été un obstacle absolu pour
-> l'application — elle accepte une URL en clair sur le réseau local. Il ne
-> bloque que le HTTPS.
+L'application Immich sauvegarde les photos du téléphone via son API, sur
+`http://192.168.1.199:2283`. Les photos ainsi envoyées vivent dans le stockage
+propre d'Immich (`docker/immich/www/immich/machine_server/library/`), et non dans
+la bibliothèque externe qui reste en lecture seule.
 
-Syncthing reste en place pour l'instant. Le téléphone dépose ses photos dans
-`/home/yves/media/photos/yves/`, soit **le dossier même qu'Immich indexe** — un
-seul emplacement, pas de stockage dédoublé. Rien ne passe par l'API d'upload, et
-le transport de Syncthing est chiffré indépendamment de TLS.
+Les photos sont donc réparties sur **deux emplacements physiques** :
+l'historique migré depuis Nextcloud dans `/home/yves/media/photos/`, et les
+nouvelles dans le stockage d'Immich. C'est invisible dans l'application — même
+chronologie, mêmes albums — mais les nouvelles photos consomment désormais leur
+taille réelle sur le disque, contrairement à la bibliothèque externe qui ne coûte
+que ses vignettes.
 
-Côté téléphone : partager `DCIM/Camera` en **« Envoi uniquement »**, pour que le
-téléphone pousse sans recevoir les 37 Go de la bibliothèque.
+> **Syncthing a été retiré.** Il avait été mis en place le 2026-09-02 pour
+> contourner l'API d'upload, alors défaillante. La mise à jour en v3.1.0 ayant
+> réparé cette API, la sauvegarde native de l'application suffit — et elle est
+> plus riche : suivi des photos déjà sauvegardées, gestion des albums, libération
+> de l'espace du téléphone. Syncthing n'a jamais été appairé à un appareil.
 
-L'interface d'administration est sur `http://127.0.0.1:8384`, liée à la boucle
-locale car elle n'a pas de mot de passe au premier démarrage.
+### Pièges rencontrés
 
-**Prérequis** : le scan périodique des bibliothèques externes doit être activé
-dans l'administration Immich, sinon les photos déposées restent invisibles.
+L'application affiche comme « déjà sauvegardées » les photos locales qui ont une
+correspondance sur le serveur. Comme tout l'historique a été importé en
+bibliothèque externe, elle considère la quasi-totalité de la pellicule comme en
+sécurité — ce qui donne l'illusion d'une sauvegarde active alors que rien n'a
+encore été envoyé. Le seul contrôle fiable est côté serveur :
 
-### Détail d'implémentation
+```sql
+select count(*) filter (where "libraryId" is null) as uploades_app from asset;
+```
 
-L'image officielle `syncthing/syncthing` **ne connaît pas `PUID`/`PGID`** — ce
-sont des variables des images LinuxServer. L'utilisateur se fixe par la directive
-`user:` du compose. La configuration est sur un volume nommé et non un bind
-mount, parce que Docker crée le répertoire hôte en root alors que le processus
-tourne en uid 1000 et ne peut alors pas écrire son certificat.
+La sauvegarde a deux interrupteurs distincts : **avant-plan** (application
+ouverte) et **arrière-plan**, souvent désactivé par défaut. Sur Android, il faut
+aussi retirer l'application de l'optimisation de batterie, sans quoi le système
+tue le service.
 
 ## TLS
 
@@ -125,7 +147,9 @@ La configuration gère les trois pièges d'un proxy devant Immich :
 | en-têtes `Upgrade` / `Connection` | plus de mise à jour temps réel (socket.io) |
 | `proxy_buffering off` | streaming vidéo dégradé |
 
-Le port `2283` reste exposé en clair. À fermer une fois le HTTPS validé.
+Le port `2283` reste exposé en clair sur le LAN : **l'application mobile s'en
+sert**, faute d'accepter le certificat auto-signé. Ne pas le fermer sans avoir
+d'abord mis en place un certificat reconnu.
 
 ### Limite de l'auto-signé
 
@@ -250,29 +274,30 @@ copie vers `Photos/` était incomplète.
 
 ## Chantiers ouverts
 
-**À décider**
-
-- **Tester la sauvegarde de l'application mobile** sur
-  `http://192.168.1.199:2283`. Si elle fonctionne, **retirer Syncthing** et son
-  enregistrement dans `cloud_services.py` : il n'existait que pour contourner
-  l'API d'upload, désormais réparée.
-
 **À faire**
 
 - **Relancer la détection de visages** : les travaux mis en file pendant les
   mises à jour ont échoué sur la salve de démarrage ML et ne se rejouent pas
   seuls. Administration → Tâches.
-- **Fermer le port 2283** une fois le HTTPS validé — sauf si l'application
-  mobile s'appuie dessus, auquel cas le laisser ouvert sur le LAN.
-- **Certificat reconnu** (Let's Encrypt DNS ou Tailscale) si tu veux du HTTPS
-  jusqu'au mobile.
+- **Surveiller la croissance du disque** : les photos envoyées par l'application
+  consomment leur taille réelle, contrairement à la bibliothèque externe.
+
+**Si tu veux sauvegarder hors du réseau local**
+
+Aujourd'hui la sauvegarde mobile ne fonctionne qu'à la maison, en HTTP sur le
+LAN. Un VPN type Tailscale donnerait l'accès depuis n'importe où sans ouvrir de
+port, et fournit un certificat Let's Encrypt valide sur un nom `*.ts.net` — ce
+qui lèverait la limite de l'auto-signé et permettrait de fermer `443` et `2283`.
+Contrepartie : une dépendance à un service tiers pour le plan de contrôle.
 
 **Propreté**
 
 - **Renommer** `NEXTCLOUD_REDIS_PASSWORD` en `IMMICH_REDIS_PASSWORD`.
 - **Supprimer l'arborescence Nextcloud** : `www/nextcloud` (873 Mo de code PHP),
-  `www/data/nextcloud` (vidé), `docker/syncthing/data` (vide, appartient à root).
+  `www/data/nextcloud` (vidé).
 - **`docker image prune`** : les couches des images 1.140.1 et v2 restent en
   cache après les deux paliers.
 - **Aligner tous les conteneurs** sur `personal_cloud` au prochain redémarrage
   complet.
+- **Fermer le port 2283** si tu passes à un accès HTTPS de bout en bout — il est
+  aujourd'hui nécessaire à l'application mobile.
